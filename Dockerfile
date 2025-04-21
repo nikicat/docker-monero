@@ -5,9 +5,6 @@ ARG ALPINE_TAG=3.20
 # Builder stage
 FROM alpine:${ALPINE_TAG} as builder
 
-ARG MONERO_TAG
-RUN test -n "${MONERO_TAG}"
-
 RUN set -ex && \
 	apk update && \
 	apk upgrade && \
@@ -52,6 +49,9 @@ RUN set -ex && \
 	go install github.com/boxboat/fixuid@v0.5.1 && \
 	chmod 4755 /root/go/bin/fixuid
 
+ARG MONERO_TAG
+RUN test -n "${MONERO_TAG}"
+
 # Clone Monero and submodules
 RUN git clone \
 		--recursive --depth 1 -b ${MONERO_TAG} \
@@ -68,15 +68,18 @@ RUN set -ex && \
 	patch -p1 < patches/miniupnpc.patch && \
 	patch -p1 < patches/monero.patch
 
+ARG CMAKE_ARCH
+ARG CMAKE_BUILD_TAG
+
 # Build monero, but like, be nice about it.
 RUN set -ex && \
 	cmake \
 		-Wno-dev \
 		-B build \
 		-G Ninja \
-		-D ARCH="x86-64" \
+		-D ARCH="${CMAKE_ARCH}" \
 		-D BUILD_64=on \
-		-D BUILD_TAG="linux-x64" \
+		-D BUILD_TAG="${CMAKE_BUILD_TAG}" \
 		-D BUILD_TESTS=off \
 		-D MANUAL_SUBMODULES=1 \
 		-D STACK_TRACE=off \
