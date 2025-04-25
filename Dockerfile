@@ -70,6 +70,8 @@ RUN set -ex && \
 
 ARG CMAKE_ARCH
 ARG CMAKE_BUILD_TAG
+ARG CMAKE_BUILD_TYPE=Release
+ARG STACK_TRACE=off
 
 # Build monero, but like, be nice about it.
 RUN set -ex && \
@@ -82,8 +84,8 @@ RUN set -ex && \
 		-D BUILD_TAG="${CMAKE_BUILD_TAG}" \
 		-D BUILD_TESTS=off \
 		-D MANUAL_SUBMODULES=1 \
-		-D STACK_TRACE=off \
-		-D CMAKE_BUILD_TYPE=Release \
+		-D STACK_TRACE=${STACK_TRACE} \
+		-D CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
 		-D CMAKE_C_COMPILER=clang \
 		-D CMAKE_CXX_COMPILER=clang++ \
 		-D CMAKE_INSTALL_PREFIX=/usr \
@@ -91,6 +93,9 @@ RUN set -ex && \
 	nice -n 19 \
 		ionice -c2 -n7 \
 			cmake --build build
+
+WORKDIR /usr/src/monero/build
+RUN mkdir lib && find . -regex '.*\.so' | xargs cp -t lib
 
 
 # Runtime stage
@@ -116,6 +121,7 @@ RUN set -ex && \
 
 COPY --from=builder /root/go/bin/fixuid /usr/local/bin/fixuid
 COPY --from=builder /usr/src/monero/build/bin/* /usr/local/bin/
+COPY --from=builder /usr/src/monero/build/lib/* /usr/local/lib/
 
 # Create a dedicated user and configure fixuid
 ARG MONERO_USER="monero"
